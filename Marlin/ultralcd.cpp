@@ -586,7 +586,14 @@ void kill_screen(const char* lcd_msg) {
     }
 
   #endif //SDSUPPORT
-
+  static void lcd_extruder_pause()
+  {
+      extrude_status=extrude_status & 254;
+  }
+  static void lcd_extruder_resume()
+  {
+     extrude_status=extrude_status|1;
+  }
   #if ENABLED(MENU_ITEM_CASE_LIGHT)
 
     extern bool case_light_on;
@@ -635,6 +642,10 @@ void kill_screen(const char* lcd_msg) {
       #endif
     }
     MENU_ITEM(submenu, MSG_CONTROL, lcd_control_menu);
+    if (extrude_status & 1 >0)
+      MENU_ITEM(function, MSG_PAUSE_EXTRUDER, lcd_extruder_pause);
+    else
+      MENU_ITEM(function, MSG_RESUME_EXTRUDER, lcd_extruder_resume);
 
     #if ENABLED(SDSUPPORT)
       if (card.cardOK) {
@@ -817,6 +828,7 @@ void kill_screen(const char* lcd_msg) {
     #if TEMP_SENSOR_BED != 0
       MENU_MULTIPLIER_ITEM_EDIT_CALLBACK(int3, MSG_BED, &thermalManager.target_temperature_bed, 0, BED_MAXTEMP - 15, watch_temp_callback_bed);
     #endif
+      MENU_MULTIPLIER_ITEM_EDIT(int3, MSG_PUL_RATIO, &pullermultiply, 10, 999);
 
     //
     // Fan Speed:

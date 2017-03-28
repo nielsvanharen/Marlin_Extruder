@@ -297,6 +297,13 @@
 #endif
 
 bool Running = true;
+char extrude_status = 0;
+
+float act_feedrate;  //real time feed rate
+int feedmultiply=100; //100->1 200->2
+int saved_feedmultiply;
+int pullermultiply = 100;
+int extrudemultiply=100; //100->1 200->2
 
 uint8_t marlin_debug_flags = DEBUG_NONE;
 
@@ -10094,6 +10101,22 @@ void idle(
   #endif
 ) {
   lcd_update();
+  if(extrude_status & 1 >0){
+ 	  //calculate move
+ 	  destination[E_AXIS] = (float)0.1*pullermultiply/100.0 + current_position[E_AXIS]; //puller
+ 	 // destination[P_AXIS] = (float)0.1*pullermultiply/100.0 + current_position[P_AXIS]; //puller
+ 	  feedrate_mm_s=20*60;
+ 
+    act_feedrate=feedrate_mm_s*feedmultiply/60.0/100.0;
+         SERIAL_ECHOPAIR("act feed", act_feedrate);
+
+
+ 	  //send move
+ 	  previous_cmd_ms = millis();  //refresh the kill watchdog timer
+ 	  planner._buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], act_feedrate, active_extruder);  //FMM added P_AXIS
+ 	  current_position[E_AXIS]=destination[E_AXIS];
+   }
+
 
   host_keepalive();
 

@@ -559,6 +559,15 @@
 #ifndef MSG_FILAMENT_CHANGE_OPTION_RESUME
   #define MSG_FILAMENT_CHANGE_OPTION_RESUME   "Resume print"
 #endif
+#ifndef MSG_PAUSE_EXTRUDER
+  #define MSG_PAUSE_EXTRUDER                  "Pause Extruder"
+#endif
+#ifndef MSG_RESUME_EXTRUDER
+  #define MSG_RESUME_EXTRUDER                 "Resume Extruder"
+#endif
+#ifndef MSG_PUL_RATIO
+  #define MSG_PUL_RATIO                       "Puller ratio"
+#endif
 
 //
 // Filament Change screens show up to 3 lines on a 4-line display
@@ -610,6 +619,7 @@
   #ifndef MSG_FILAMENT_CHANGE_RESUME_1
     #define MSG_FILAMENT_CHANGE_RESUME_1        "Resuming..."
   #endif
+  
 #endif // LCD_HEIGHT < 4
 
 #endif // LANGUAGE_EN_H

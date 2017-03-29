@@ -541,11 +541,12 @@ static void lcd_implementation_status_screen() {
   // When axis is homed but axis_known_position is false the axis letters are blinking 'X' <-> ' '.
   // When everything is ok you see a constant 'X'.
 
-  static char xstring[5], ystring[5], zstring[7];
+  static char xstring[5],estring[5], ystring[5], zstring[7];
 
   // At the first page, regenerate the XYZ strings
   if (page.page == 0) {
     strcpy(xstring, ftostr4sign(current_position[X_AXIS]));
+    strcpy(estring, ftostr4sign(current_position[E_AXIS]));
     strcpy(ystring, ftostr4sign(current_position[Y_AXIS]));
     strcpy(zstring, ftostr52sp(current_position[Z_AXIS] + 0.00001));
   }
@@ -563,21 +564,21 @@ static void lcd_implementation_status_screen() {
       #if DISABLED(XYZ_HOLLOW_FRAME)
         u8g.setColorIndex(0); // white on black
       #endif
-
+        
       u8g.setPrintPos(0 * XYZ_SPACING + X_LABEL_POS, XYZ_BASELINE);
-      _draw_axis_label(X_AXIS, PSTR(MSG_X), blink);
+      _draw_axis_label(E_AXIS, PSTR(MSG_E), blink);
       u8g.setPrintPos(0 * XYZ_SPACING + X_VALUE_POS, XYZ_BASELINE);
-      lcd_print(xstring);
+      lcd_print(estring);
 
       u8g.setPrintPos(1 * XYZ_SPACING + X_LABEL_POS, XYZ_BASELINE);
-      _draw_axis_label(Y_AXIS, PSTR(MSG_Y), blink);
+      _draw_axis_label(E_AXIS, PSTR(MSG_E), blink);
       u8g.setPrintPos(1 * XYZ_SPACING + X_VALUE_POS, XYZ_BASELINE);
-      lcd_print(ystring);
-
-      u8g.setPrintPos(2 * XYZ_SPACING + X_LABEL_POS, XYZ_BASELINE);
-      _draw_axis_label(Z_AXIS, PSTR(MSG_Z), blink);
-      u8g.setPrintPos(2 * XYZ_SPACING + X_VALUE_POS, XYZ_BASELINE);
-      lcd_print(zstring);
+      lcd_print(ftostr32(act_feedrate/pullermultiply*100.0));
+//
+//      u8g.setPrintPos(2 * XYZ_SPACING + X_LABEL_POS, XYZ_BASELINE);
+//      _draw_axis_label(Z_AXIS, PSTR(MSG_Z), blink);
+//      u8g.setPrintPos(2 * XYZ_SPACING + X_VALUE_POS, XYZ_BASELINE);
+//      lcd_print(zstring);
 
       #if DISABLED(XYZ_HOLLOW_FRAME)
         u8g.setColorIndex(1); // black on white

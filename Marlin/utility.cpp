@@ -252,5 +252,20 @@ void safe_delay(millis_t ms) {
     conv[6] = '\0';
     return conv;
   }
+  char *ftostr22(const float &x)
+  {
+   long xx=x*100;
+   if (xx >= 0)
+     conv[0]=(xx/1000)%10+'0';
+   else
+     conv[0]='-';
+   xx=abs(xx);
+   conv[1]=(xx/100)%10+'0';
+   conv[2]='.';
+   conv[3]=(xx/10)%10+'0';
+   conv[4]=(xx)%10+'0';
+   conv[5]=0;
+   return conv;
+  }
 
 #endif // ULTRA_LCD

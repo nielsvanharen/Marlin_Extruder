@@ -134,7 +134,6 @@ class Temperature {
       static bool tooColdToExtrude(uint8_t e) { UNUSED(e); return false; }
     #endif
 
-  private:
 
     #if ENABLED(TEMP_SENSOR_1_AS_REDUNDANT)
       static int redundant_temperature_raw;

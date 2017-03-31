@@ -62,8 +62,8 @@
 
 extern const char echomagic[] PROGMEM;
 extern const char errormagic[] PROGMEM;
-extern float act_feedrate;
-extern char extrude_status;
+extern float puller_feedrate;
+extern unsigned char extrude_status;
 extern int feedmultiply;
 extern int pullermultiply;
 extern int extrudemultiply; // Sets extrude multiply factor (in percent) for all extruders

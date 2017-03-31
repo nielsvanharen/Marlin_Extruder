@@ -297,15 +297,29 @@
 #endif
 
 bool Running = true;
-char extrude_status = 0;
-
-float act_feedrate;  //real time feed rate
-int feedmultiply=100; //100->1 200->2
-int saved_feedmultiply;
-int pullermultiply = 100;
-int extrudemultiply=100; //100->1 200->2
-
+unsigned char extrude_status =0;
+float max_measured_filament_width=0;
+float min_measured_filament_width=0;
+float sum_measured_filament_width=0;  //numerator in average
+float n_measured_filament_width=0;  //denominator in average
+float avg_measured_filament_width=0; //average
+float extrude_length=0; //length extruded
+float puller_feedrate_default = DEFAULT_PULLER_FEEDRATE; //puller motor feed rate in mm/sec
+float puller_feedrate= DEFAULT_PULLER_FEEDRATE; //puller motor feed rate in mm/sec
+float puller_feedrate_last = DEFAULT_PULLER_FEEDRATE;
+static float puller_increment; //used to calculate the increment to add to create the next planning move for the puller motor
+static float dia_iState_fwidth = { 0 };
+static float dia_dState_fwidth = { 0 };
+static float pTerm_fwidth;
+static float iTerm_fwidth;
+static float dTerm_fwidth;
+static bool pid_reset_fwidth;
+  //int output;
+static float pid_error_fwidth;
+static float pid_input;
 uint8_t marlin_debug_flags = DEBUG_NONE;
+
+float filament_control=0.0;
 
 /**
  * Cartesian Current Position
@@ -10101,23 +10115,7 @@ void idle(
   #endif
 ) {
   lcd_update();
-  if(extrude_status & 1 >0){
- 	  //calculate move
- 	  destination[E_AXIS] = (float)0.1*pullermultiply/100.0 + current_position[E_AXIS]; //puller
- 	 // destination[P_AXIS] = (float)0.1*pullermultiply/100.0 + current_position[P_AXIS]; //puller
- 	  feedrate_mm_s=20*60;
- 
-    act_feedrate=feedrate_mm_s*feedmultiply/60.0/100.0;
-         SERIAL_ECHOPAIR("act feed", act_feedrate);
-
-
- 	  //send move
- 	  previous_cmd_ms = millis();  //refresh the kill watchdog timer
- 	  planner._buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], act_feedrate, active_extruder);  //FMM added P_AXIS
- 	  current_position[E_AXIS]=destination[E_AXIS];
-   }
-
-
+  
   host_keepalive();
 
   #if ENABLED(AUTO_REPORT_TEMPERATURES) && (HAS_TEMP_HOTEND || HAS_TEMP_BED)
@@ -10139,6 +10137,53 @@ void idle(
   #if HAS_BUZZER && DISABLED(LCD_USE_I2C_BUZZER)
     buzzer.tick();
   #endif
+}
+
+void run_extruder(){
+  if(extrude_status & 1 >0)
+  {
+      
+    if (min_measured_filament_width>filament_width_meas || min_measured_filament_width==0)
+      min_measured_filament_width=filament_width_meas;
+    if (max_measured_filament_width<filament_width_meas)
+          max_measured_filament_width=filament_width_meas;
+    
+    sum_measured_filament_width = sum_measured_filament_width+filament_width_meas;
+    n_measured_filament_width = n_measured_filament_width + 1.0;
+    avg_measured_filament_width=sum_measured_filament_width/n_measured_filament_width;
+    extrude_length=extrude_length+puller_increment;
+  
+        
+    puller_increment=puller_feedrate*0.6/EXTRUDER_RPM_MAX*8;  //make puller increment vary to control it *8 for more duration (removes pulsing)
+    destination[E_AXIS] = puller_increment + current_position[E_AXIS]; //puller
+    
+    pid_input = filament_width_meas;
+    pid_error_fwidth = DEFAULT_NOMINAL_FILAMENT_DIA - pid_input;
+    pTerm_fwidth = puller_feedrate_last - thermalManager.Kp * pid_error_fwidth;
+    if((filament_control<PULLER_PID_MAX_LIMIT && pid_error_fwidth<0) || (filament_control>PULLER_PID_MIN_LIMIT && pid_error_fwidth>0))
+    {
+      dia_iState_fwidth += pid_error_fwidth* puller_increment; //use spatial dT=puller_increment
+      dia_iState_fwidth = constrain(dia_iState_fwidth, -PULLER_PID_INTEGRATOR_WIND_LIMIT, PULLER_PID_INTEGRATOR_WIND_LIMIT);
+    }
+    iTerm_fwidth = thermalManager.Ki * dia_iState_fwidth;  
+  
+    //K1 defined in Configuration.h in the PID settings
+    #define K2 (1.0-K1)
+    dTerm_fwidth= (thermalManager.Kd/puller_increment * (pid_input - dia_dState_fwidth))*K2 + (K1 * dTerm_fwidth);  //use spatial dT=puller_increment
+          
+    filament_control = constrain(pTerm_fwidth - iTerm_fwidth + dTerm_fwidth, PULLER_PID_MIN_LIMIT, PULLER_PID_MAX_LIMIT);
+          
+    dia_dState_fwidth = pid_input;
+    puller_feedrate=filament_control;
+    previous_cmd_ms = millis();  //refresh the kill watchdog timer
+  
+    planner.buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], puller_feedrate, active_extruder);  //FMM added P_AXIS
+    current_position[E_AXIS]=destination[E_AXIS];
+    
+  }else{
+          puller_feedrate_last=puller_feedrate;  //keep track of last puller_feedrate when running manual control
+          dia_iState_fwidth=0;  //reset the integral
+  }
 }
 
 /**
@@ -10412,4 +10457,5 @@ void loop() {
   }
   endstops.report_state();
   idle();
+  run_extruder();
 }
